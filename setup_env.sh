@@ -22,6 +22,8 @@ fi
 echo "== torch: $TORCH_FLAVOUR, python env: $VENV"
 
 command -v uv >/dev/null || pip install -q uv
+# Colab's notebook matplotlib backend means nothing to the venv's matplotlib
+export MPLBACKEND=Agg
 # Colab sets uv up to install into its own Python: always this venv
 unset UV_SYSTEM_PYTHON UV_PYTHON UV_PROJECT_ENVIRONMENT
 [ -x "$VENV/bin/python" ] || uv venv -q -p 3.12 "$VENV"

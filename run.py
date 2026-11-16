@@ -8,14 +8,19 @@ WORK_DIR holds data/ (prepare_data.py) and gets output/ and the run's config
 (hey_emkay_run.yml: hey_emkay.yml with the overrides, paths made absolute).
 Each stage can be rerun; generation goes on from the clips already there.
 """
-import argparse
-import subprocess
-import sys
-from pathlib import Path
+import os
 
-import yaml
+# Colab's notebook matplotlib backend means nothing here (acoustics imports pyplot)
+os.environ["MPLBACKEND"] = "Agg"
 
-import openwakeword
+import argparse  # noqa: E402
+import subprocess  # noqa: E402
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+import yaml  # noqa: E402
+
+import openwakeword  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 TRAIN = Path(openwakeword.__file__).parent / "train.py"
