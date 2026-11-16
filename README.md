@@ -86,8 +86,39 @@ A higher `threshold` means fewer false wake-ups, a lower one that it hears you m
 Emkay does not read `model` for openWakeWord yet (it ships openWakeWord's own
 models by name); that change comes with the first model.
 
+## Models
+
+Trained models are attached to this repo's
+[releases](https://github.com/emkay-voice/hey-emkay-wakeword/releases); the config each
+was trained with is in [`models/`](models).
+
+### v0.1 (2026-11-16)
+
+[`hey_emkay_v0.1.onnx`](https://github.com/emkay-voice/hey-emkay-wakeword/releases/download/v0.1/hey_emkay_v0.1.onnx)
+(205 kB), trained on Colab's free T4 with the defaults here: 50,000 clips, 50,000 steps,
+4 AudioSet shards ([`models/hey_emkay_v0.1.yml`](models/hey_emkay_v0.1.yml)).
+
+`evaluate.py` on the held-out clips (with noise and room echo added) and 10.7 h of
+validation audio:
+
+| threshold | recall | look-alikes heard | false wake-ups/h |
+|---:|---:|---:|---:|
+| 0.3 | 30.8% | 0.1% | 1.40 |
+| 0.5 | 28.9% | 0.1% | 0.93 |
+| 0.7 | 26.7% | 0.1% | 0.75 |
+| 0.8 | 25.1% | 0.1% | 0.28 |
+| 0.9 | 22.3% | 0.1% | 0.09 |
+
+On clean clips (new synthetic voices, a little room noise, streamed 80 ms at a time as
+Emkay does) it heard "hey M K" in all 60 and none of "okay", "hey Mike", "hey Mickey",
+"hey Mycroft" or "what time is it" (one "hey Kay" in 20). Those voices are from the
+generator it was trained on, so real voices are the real test; threshold 0.8 is the
+place to start.
+
 ## Licence
 
-The code here is Apache-2.0. A trained model is not in this repo yet: its licence
-depends on the training data (openWakeWord publishes its own models as CC BY-NC-SA 4.0
-for that reason), so check the data's terms before you publish one.
+The code here is Apache-2.0.
+
+The trained models are **CC BY-NC-SA 4.0** (non-commercial), like openWakeWord's own
+pre-trained models: they are trained with openWakeWord's negative features (ACAV100M)
+and AudioSet audio, whose terms do not allow more.
