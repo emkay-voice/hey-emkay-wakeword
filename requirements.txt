@@ -1,0 +1,28 @@
+# Training environment for hey_emkay (Python 3.12), tested together.
+# PyTorch is installed first, from PyTorch's own index (torch==2.8.0,
+# torchaudio==2.8.0: torchaudio 2.9 drops the audio I/O speechbrain and
+# torch-audiomentations still use). openWakeWord is installed from git with
+# --no-deps: its "full" extras pin TensorFlow 2.8, which is only needed for
+# .tflite export, and Emkay uses the .onnx model.
+acoustics==0.2.6
+audiomentations==0.33.0
+datasets==3.6.0
+huggingface-hub==2.4.0
+mutagen==1.48.1
+numpy==2.2.6
+onnx==1.23.2
+onnxruntime==1.32.0
+piper-tts==1.3.0
+pronouncing==0.3.0
+pyarrow==26.0.1
+pyyaml==6.0.3
+requests==2.34.2
+scikit-learn==1.9.1
+scipy==1.14.1
+soundfile==0.14.0
+speechbrain==1.1.2
+torch-audiomentations==0.12.0
+torchinfo==1.8.0
+torchmetrics==1.9.0
+tqdm==4.70.1
+webrtcvad==2.0.10

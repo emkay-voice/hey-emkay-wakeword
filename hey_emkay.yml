@@ -1,0 +1,103 @@
+# openWakeWord training config for Emkay's wake word, "hey M K".
+# Used by openWakeWord's own train.py (openwakeword/train.py); every key is
+# documented in its examples/custom_model.yml. run.py reads this, applies its
+# command-line overrides and makes the paths absolute: the data paths are
+# relative to the work folder (where prepare_data.py put data/).
+
+model_name: "hey_emkay"
+
+# Said "hey M K", the letters, in English: /heɪ ɛm keɪ/ (espeak, Piper's
+# phonemizer, reads both alike). Only words in the CMU dictionary: train.py
+# finds look-alike negatives through it, and for other words it needs
+# DeepPhonemizer, which no longer loads with current PyTorch.
+target_phrase:
+  - "hey M K"
+  - "hey em kay"
+
+# Things people say that sound close, besides the ones train.py makes by
+# phoneme overlap. "okay" is said all the time, so it is here in many forms.
+custom_negative_phrases:
+  - "okay"
+  - "OK"
+  - "okay okay"
+  - "hey okay"
+  - "hey, okay"
+  - "okay then"
+  - "hey"
+  - "hey Kay"
+  - "hey K"
+  - "hey M"
+  - "hey em"
+  - "hey Emma"
+  - "hey Emily"
+  - "hey Mickey"
+  - "hey Mike"
+  - "hey Mikey"
+  - "hey Mary"
+  - "hey Jake"
+  - "hey Ray"
+  - "hey you"
+  - "hey there"
+  - "hey Mycroft"
+  - "hey Jarvis"
+  - "MK"
+  - "M K"
+  - "em kay"
+  - "AMK"
+  - "a may"
+  - "hey may"
+  - "hey make"
+  - "hey cake"
+  - "they came"
+  - "they made"
+  - "hey anyway"
+  - "say okay"
+  - "hey, can I"
+  - "hey em pee"
+  - "hey em see"
+  - "hey em jay"
+  - "hey ex kay"
+  - "hey el kay"
+  - "hey en kay"
+  - "hey J K"
+  - "hey D K"
+  - "hey B K"
+  - "hey P K"
+  - "hey T K"
+  - "hey OK"
+
+# Positive clips (minimum 20,000 recommended; more is better)
+n_samples: 50000
+n_samples_val: 5000
+
+tts_batch_size: 50
+augmentation_batch_size: 16
+augmentation_rounds: 1
+
+# run.py points this at this repo, for its generate_samples.py
+piper_sample_generator_path: "."
+output_dir: "./output"
+
+rir_paths:
+  - "./data/mit_rirs"
+background_paths:
+  - "./data/background"
+background_paths_duplication_rate:
+  - 1
+
+false_positive_validation_data_path: "./data/validation_set_features.npy"
+feature_data_files:
+  "ACAV100M_sample": "./data/openwakeword_features_ACAV100M_2000_hrs_16bit.npy"
+batch_n_per_class:
+  "ACAV100M_sample": 1024
+  "adversarial_negative": 50
+  "positive": 50
+
+model_type: "dnn"
+layer_size: 32
+
+steps: 50000
+max_negative_weight: 1500
+target_false_positives_per_hour: 0.2
+target_accuracy: 0.7
+target_recall: 0.5
