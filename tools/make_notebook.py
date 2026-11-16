@@ -16,6 +16,7 @@ with openWakeWord's own training script and synthetic speech from
 [piper-sample-generator](https://github.com/rhasspy/piper-sample-generator) (904 voices).
 
 **Before you start:** *Runtime → Change runtime type → T4 GPU*. Then *Runtime → Run all*.
+Each step ends with a green ✅ line; if one fails it stops there with a red ❌ error.
 It takes about 1½–2 hours on a free T4. Keep the tab open; at the end the browser downloads
 `hey_emkay.onnx`.
 
@@ -34,36 +35,47 @@ gpu = subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total", "--format=c
 print("GPU:", gpu.stdout.strip() or "none - choose Runtime → Change runtime type → T4 GPU, "
       "or this runs on CPU (many hours)")
 PY = "/content/venv/bin/python"
-WORK = "/content/work\""""),
+WORK = "/content/work"
+
+def sh(cmd, done="done"):
+    \"\"\"Run a shell command, show its output as it comes, and stop here (red) if it fails.\"\"\"
+    import subprocess, sys
+    p = subprocess.Popen(cmd, shell=True, cwd="/content", stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, text=True, bufsize=1)
+    for chunk in iter(lambda: p.stdout.read(256), ""):
+        sys.stdout.write(chunk)
+        sys.stdout.flush()
+    if p.wait() != 0:
+        raise RuntimeError(f"❌ FAILED (exit {p.returncode}) - send the output above to get help")
+    print(f"\\n✅ {done}")"""),
     ("code", f"""#@title Install (~3 min)
-%cd /content
-!test -d hey-emkay-wakeword || git clone -q {REPO}
-!git -C hey-emkay-wakeword pull -q
-!bash hey-emkay-wakeword/setup_env.sh"""),
+sh("(test -d hey-emkay-wakeword || git clone -q {REPO}) && git -C hey-emkay-wakeword pull -q"
+   " && bash hey-emkay-wakeword/setup_env.sh", "installed")"""),
     ("code", """#@title Download data (~20 GB, ~10 min)
 # room impulse responses, AudioSet background audio, openWakeWord's negative
 # and validation features (Hugging Face)
-!{PY} hey-emkay-wakeword/prepare_data.py {WORK}/data --audioset-shards {AUDIOSET_SHARDS}
-!df -h /content | tail -1"""),
+sh(f"{PY} hey-emkay-wakeword/prepare_data.py {WORK}/data --audioset-shards {AUDIOSET_SHARDS}"
+   " && df -h /content | tail -1", "data downloaded")"""),
     ("code", """#@title 1. Generate synthetic clips (~20–30 min)
 # positive "hey M K" clips and look-alike negatives; rerun to go on after a break
-!{PY} hey-emkay-wakeword/run.py {WORK} --stage generate --n-samples {N_SAMPLES} \\
-    --n-samples-val {N_SAMPLES_VAL} --steps {STEPS} --tts-batch-size {TTS_BATCH_SIZE}"""),
+sh(f"{PY} hey-emkay-wakeword/run.py {WORK} --stage generate --n-samples {N_SAMPLES} "
+   f"--n-samples-val {N_SAMPLES_VAL} --steps {STEPS} --tts-batch-size {TTS_BATCH_SIZE}", "clips generated")"""),
     ("code", """#@title Listen to a few clips
 import glob, random
 from IPython.display import Audio, display
 for kind in ("positive_train", "negative_train"):
     print(kind)
-    for f in random.sample(glob.glob(f"{WORK}/output/hey_emkay/{kind}/*.wav"), 4):
+    clips = glob.glob(f"{WORK}/output/hey_emkay/{kind}/*.wav")
+    for f in random.sample(clips, min(4, len(clips))):
         display(Audio(f))"""),
     ("code", """#@title 2. Augment and compute features (~30–40 min)
-!{PY} hey-emkay-wakeword/run.py {WORK} --stage augment --n-samples {N_SAMPLES} \\
-    --n-samples-val {N_SAMPLES_VAL} --steps {STEPS} --tts-batch-size {TTS_BATCH_SIZE}"""),
+sh(f"{PY} hey-emkay-wakeword/run.py {WORK} --stage augment --n-samples {N_SAMPLES} "
+   f"--n-samples-val {N_SAMPLES_VAL} --steps {STEPS} --tts-batch-size {TTS_BATCH_SIZE}", "features computed")"""),
     ("code", """#@title 3. Train (~20–40 min)
-!{PY} hey-emkay-wakeword/run.py {WORK} --stage train --n-samples {N_SAMPLES} \\
-    --n-samples-val {N_SAMPLES_VAL} --steps {STEPS} --tts-batch-size {TTS_BATCH_SIZE}"""),
+sh(f"{PY} hey-emkay-wakeword/run.py {WORK} --stage train --n-samples {N_SAMPLES} "
+   f"--n-samples-val {N_SAMPLES_VAL} --steps {STEPS} --tts-batch-size {TTS_BATCH_SIZE}", "model trained")"""),
     ("code", """#@title Check the model and download it
-!{PY} hey-emkay-wakeword/evaluate.py {WORK}
+sh(f"{PY} hey-emkay-wakeword/evaluate.py {WORK}", "evaluated")
 import shutil
 from google.colab import files
 shutil.copy(f"{WORK}/hey_emkay_run.yml", f"{WORK}/output/hey_emkay_run.yml")

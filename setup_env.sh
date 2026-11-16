@@ -19,7 +19,7 @@ TORCH_FLAVOUR="${1:-}"
 if [ -z "$TORCH_FLAVOUR" ]; then
   if nvidia-smi >/dev/null 2>&1; then TORCH_FLAVOUR=cu126; else TORCH_FLAVOUR=cpu; fi
 fi
-echo "== torch: $TORCH_FLAVOUR"
+echo "== torch: $TORCH_FLAVOUR, python env: $VENV"
 
 command -v uv >/dev/null || pip install -q uv
 [ -x "$VENV/bin/python" ] || uv venv -q -p 3.12 "$VENV"
@@ -45,4 +45,12 @@ sed -i 's/if args.convert_to_tflite:/if args.convert_to_tflite is True:/' "$SITE
 # openWakeWord's feature models (melspectrogram, embedding)
 "$VENV/bin/python" -c "import openwakeword.utils as u; u.download_models(model_names=['-'])" >/dev/null 2>&1
 
+# check that everything imports
+PYTHONWARNINGS=ignore HERE="$HERE" "$VENV/bin/python" - <<'PY'
+import os, sys
+sys.path.insert(0, os.environ["HERE"])
+import torch, torchaudio, yaml, onnxruntime, openwakeword, openwakeword.data
+from generate_samples import generate_samples   # this repo + piper-sample-generator
+print("torch", torch.__version__, "| GPU:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "none")
+PY
 echo "== ready: $VENV/bin/python, train.py at $SITE/openwakeword/train.py"
