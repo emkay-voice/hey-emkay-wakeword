@@ -55,6 +55,7 @@ look-alikes it hears, and the false wake-ups per hour.
 | `run.py` | runs openWakeWord's `train.py` with the config |
 | `generate_samples.py` | the TTS step for `train.py` (see below) |
 | `evaluate.py` | recall and false wake-ups per threshold |
+| `.github/workflows/publish-model.yml`, `tools/model_card.py` | a release's model on Hugging Face ([Emkay-Voice/hey-emkay-wakeword](https://huggingface.co/emkay-voice/hey-emkay-wakeword)) with its model card: on every release, or by hand (*Actions → Publish model*); needs the `HF_TOKEN` secret |
 
 ### Why `generate_samples.py`
 

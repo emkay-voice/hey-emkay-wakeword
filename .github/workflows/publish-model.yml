@@ -1,0 +1,84 @@
+# Publish a release's model on Hugging Face as NAMESPACE/hey-emkay-wakeword
+# (emkay-voice/hey-emkay-wakeword), with a model card (CC BY-NC-SA 4.0).
+# Runs when a release is published, or by hand: Actions → Publish model
+# (for a release that already exists, e.g. after testing it on a phone).
+#
+# Needs the repository secret HF_TOKEN: a Hugging Face token with write access
+# to the emkay-voice organisation. An owner adds it by hand (Settings →
+# Secrets and variables → Actions); it is never written anywhere else.
+name: Publish model
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release to publish (e.g. v0.1)"
+        required: true
+      namespace:
+        description: "Organisation on Hugging Face"
+        # the organisation's handle on Hugging Face has capitals; downloads
+        # work with emkay-voice too, creating a repo needs the exact handle
+        default: Emkay-Voice
+      upload:
+        description: "Upload to Hugging Face (off: only check and keep the files as an artifact)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  TAG: ${{ inputs.tag || github.event.release.tag_name }}
+  NAMESPACE: ${{ inputs.namespace || 'Emkay-Voice' }}
+  UPLOAD: ${{ github.event_name == 'release' || inputs.upload }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The release's files
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          mkdir -p out
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D out -p "*.onnx" -p "*.yml"
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json body --jq .body > notes.md
+          ls -la out
+      - name: Check the model and write its card
+        run: |
+          pip install -q onnxruntime huggingface_hub
+          python - <<'EOF'
+          import glob, numpy as np, onnxruntime as ort
+          (path,) = glob.glob("out/*.onnx")
+          s = ort.InferenceSession(path)
+          i, o = s.get_inputs()[0], s.get_outputs()[0]
+          assert i.shape == [1, 16, 96], i.shape
+          score = s.run(None, {i.name: np.zeros((1, 16, 96), np.float32)})[0]
+          assert score.shape == (1, 1) and 0 <= score.item() <= 1, score
+          print(path, "ok: input", i.shape, "output", o.shape)
+          EOF
+          python tools/model_card.py "$TAG" out notes.md
+      - name: Keep the files
+        if: env.UPLOAD != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: hey-emkay-wakeword-${{ env.TAG }}
+          path: out
+      - name: Upload to Hugging Face
+        if: env.UPLOAD == 'true'
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          test -n "$HF_TOKEN" || { echo "::error::The HF_TOKEN secret is missing"; exit 1; }
+          python - <<'EOF'
+          import os
+          from huggingface_hub import HfApi
+          api, repo = HfApi(), os.environ["NAMESPACE"] + "/hey-emkay-wakeword"
+          api.create_repo(repo, exist_ok=True)
+          api.upload_folder(repo_id=repo, folder_path="out",
+                            commit_message="hey_emkay " + os.environ["TAG"])
+          api.create_tag(repo, tag=os.environ["TAG"], exist_ok=True)
+          print("https://huggingface.co/" + repo)
+          EOF
