@@ -22,8 +22,11 @@ fi
 echo "== torch: $TORCH_FLAVOUR, python env: $VENV"
 
 command -v uv >/dev/null || pip install -q uv
+# Colab sets uv up to install into its own Python: always this venv
+unset UV_SYSTEM_PYTHON UV_PYTHON UV_PROJECT_ENVIRONMENT
 [ -x "$VENV/bin/python" ] || uv venv -q -p 3.12 "$VENV"
 export VIRTUAL_ENV="$VENV"
+UVPIP=(uv pip install -q --python "$VENV/bin/python")
 
 if [ ! -d "$PSG/.git" ]; then
   git clone -q https://github.com/rhasspy/piper-sample-generator "$PSG"
@@ -33,10 +36,10 @@ git -C "$PSG" checkout -q "$PSG_COMMIT"
 [ -s "$PSG/models/en_US-libritts_r-medium.pt" ] || \
   curl -fsSL -o "$PSG/models/en_US-libritts_r-medium.pt" "$GENERATOR"
 
-uv pip install -q torch==2.8.0 torchaudio==2.8.0 \
+"${UVPIP[@]}" torch==2.8.0 torchaudio==2.8.0 \
   --index-url "https://download.pytorch.org/whl/$TORCH_FLAVOUR"
-uv pip install -q --no-deps "openwakeword @ git+https://github.com/dscripka/openWakeWord@$OWW_COMMIT"
-uv pip install -q -r "$HERE/requirements.txt"
+"${UVPIP[@]}" --no-deps "openwakeword @ git+https://github.com/dscripka/openWakeWord@$OWW_COMMIT"
+"${UVPIP[@]}" -r "$HERE/requirements.txt"
 
 SITE="$("$VENV/bin/python" -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"
 # train.py's --convert_to_tflite defaults to the string "False", which is
